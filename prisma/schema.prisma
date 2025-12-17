@@ -1,0 +1,67 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+//  provider = "prisma-client"
+//  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+//  url       = env("DATABASE_URL") // 풀링된 연결 (앱 동작용)
+//  directUrl = env("DIRECT_URL") // 직접 연결 (마이그레이션용)
+}
+
+// 사용자 (User)
+model User {
+  id        String   @id @default(uuid()) // 보안을 위해 UUID 사용
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+
+  wallets       Wallet[]
+  splitExpenses SplitExpense[] // 내가 낸 정산 내역
+}
+
+// 자산 지갑 (Wallet) - 통화별로 분리
+model Wallet {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  currencyCode String   // 'GBP', 'KRW'
+  balance      Decimal  @default(0) // 중요: 부동소수점 오류 방지
+  createdAt    DateTime @default(now())
+
+  transactions Transaction[]
+
+  @@unique([userId, currencyCode]) // 한 유저는 같은 통화의 지갑을 하나만 가짐
+}
+
+// 거래 내역 (Transaction)
+model Transaction {
+  id              String   @id @default(uuid())
+  walletId        String
+  wallet          Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  amount          Decimal  // 수입(+), 지출(-)
+  category        String   // 'Food', 'Transport'
+  description     String?
+  transactionDate DateTime @default(now())
+
+  createdAt       DateTime @default(now())
+}
+
+// 더치페이/정산 (SplitExpense) - 추후 확장 가능
+model SplitExpense {
+  id           String   @id @default(uuid())
+  payerId      String
+  payer        User     @relation(fields: [payerId], references: [id])
+  amount       Decimal
+  currencyCode String
+  description  String
+  isSettled    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+}
