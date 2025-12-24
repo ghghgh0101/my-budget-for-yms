@@ -28,3 +28,7 @@ jobs:
 
             - name: Run Tests
               run: npm run test
+
+            - name: Deploy to Render
+              if: success() # 이전 단계(테스트/빌드)가 성공했을 때만 실행
+              run: curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
