@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-export default function RegisterPage() {
+export default function Register() {
 	const router = useRouter();
 	const [formData, setFormData] = useState({
 		email: '',
@@ -36,12 +36,33 @@ export default function RegisterPage() {
 				throw new Error(data.error || 'Something went wrong');
 			}
 
+			const userId = data.user.id || data.user?.id; // 가입된 유저 ID
+			if (!userId) {
+				// ID가 없으면 경고창 띄우고 이동 안 함 (디버깅용)
+				alert(`가입은 됐는데 ID를 못 찾겠어요.\n응답 데이터: ${JSON.stringify(data)}`);
+				return;
+			}
+
+			// 1. 미들웨어(서버 문지기) 통과용 -> 쿠키에 저장
+			// (path=/ 는 사이트 전체에서 유효하다는 뜻)
+			document.cookie = `userId=${userId}; path=/; max-age=86400`;
+
+			// 2. 대시보드(화면 UI) 표시용 -> 로컬 스토리지에 저장
+			localStorage.setItem('userId', userId);
+
+			console.log('저장된 ID:', userId); // 개발자 도구 콘솔 확인용
+
 			// 성공 시 (일단 알림창 띄우고 메인으로 이동)
 			alert('Registration successful! Welcome to Global Wallet.');
-			router.push('/'); // 메인 페이지로 이동 (아직 안 만들었지만)
+			router.push('/'); // 메인 페이지로 이동
 
-		} catch (err: any) {
-			setError(err.message);
+		} catch (err: unknown) {
+			// setError(err.message);
+			if (err instanceof Error) {
+				setError(err.message); // Error 객체라면 message 속성 사용
+			} else {
+				setError('알 수 없는 에러가 발생했습니다.');
+			}
 		} finally {
 			setIsLoading(false);
 		}
